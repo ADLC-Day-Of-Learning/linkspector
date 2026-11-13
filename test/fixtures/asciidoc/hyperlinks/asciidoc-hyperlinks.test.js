@@ -1,0 +1,52 @@
+import { expect, test } from 'vitest'
+import { linkspector } from './linkspector.js'
+
+let cmd = {
+  json: true,
+}
+
+test('linkspector should check hyperlinks in AsciiDoc files', async () => {
+  let hasErrorLinks = false
+  let currentFile = '' // Variable to store the current file name
+  let results = [] // Array to store the results if json is true
+
+  for await (const item of linkspector(
+    './test/fixtures/asciidoc/hyperlinks/hyperlinksTest.yml',
+    cmd
+  )) {
+    if (item.type === 'meta') continue
+    const { file, result } = item
+    currentFile = file
+    for (const linkStatusObj of result) {
+      if (cmd.json) {
+        results.push({
+          file: currentFile,
+          link: linkStatusObj.link,
+          status_code: linkStatusObj.status_code,
+          line_number: linkStatusObj.line_number,
+          position: linkStatusObj.position,
+          status: linkStatusObj.status,
+          error_message: linkStatusObj.error_message,
+        })
+      }
+      if (linkStatusObj.status === 'error') {
+        hasErrorLinks = true
+      }
+    }
+  }
+
+  console.log('✅ Comprehensive AsciiDoc test results:')
+  console.log(`  📊 Total URLs found: ${results.length}`)
+  console.log(`  🔗 URLs detected:`)
+  results.forEach((result) => {
+    console.log(result.link)
+    console.log(result.status)
+  })
+
+  expect(hasErrorLinks).toBe(true)
+  expect(results.length).toBe(4)
+  expect(results[0].status).toBe('alive')
+  expect(results[1].status).toBe('error')
+  expect(results[2].status).toBe('error')
+  expect(results[3].status).toBe('alive')
+})
